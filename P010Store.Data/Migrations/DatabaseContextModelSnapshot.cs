@@ -99,10 +99,19 @@ namespace P010Store.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsTopMenu")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("OrderNo")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ParentId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -248,7 +257,7 @@ namespace P010Store.Data.Migrations
                         new
                         {
                             Id = 1,
-                            CreateDate = new DateTime(2022, 12, 17, 10, 21, 43, 920, DateTimeKind.Local).AddTicks(6166),
+                            CreateDate = new DateTime(2023, 1, 29, 10, 24, 40, 591, DateTimeKind.Local).AddTicks(7982),
                             Email = "admin@projeuygulamasi.com",
                             IsActive = true,
                             IsAdmin = true,

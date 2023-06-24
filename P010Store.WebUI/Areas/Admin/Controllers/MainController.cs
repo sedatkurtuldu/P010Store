@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace P010Store.WebUI.Areas.Admin.Controllers
 {
-    [Area("Admin")]
-    public class MainController : Controller
+	[Area("Admin"), Authorize]
+	public class MainController : Controller
     {
         public IActionResult Index()
         {

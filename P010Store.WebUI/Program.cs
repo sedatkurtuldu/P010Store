@@ -1,25 +1,46 @@
-using P010Store.Data;
+ï»¿using P010Store.Data;
 using P010Store.Data.Abstract;
 using P010Store.Data.Concrete;
 using P010Store.Service.Abstract;
 using P010Store.Service.Concrete;
+using Microsoft.AspNetCore.Authentication.Cookies; // oturum iÅŸlemi iÃ§in gerekli kÃ¼tÃ¼phane
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<DatabaseContext>(); // Entityframework işlemlerini yapabilmek için bu satırı ekliyoruz
+builder.Services.AddDbContext<DatabaseContext>(); // Entityframework iÅŸlemlerini yapabilmek iÃ§in bu satÄ±rÄ± ekliyoruz
 builder.Services.AddTransient(typeof(IRepository<>), typeof(Repository<>));
-builder.Services.AddTransient(typeof(IService<>), typeof(Service<>)); // Veritabanı işlemleri yapacağımız servisleri ekledik. Burada .net core a eğer sana IService interface i kullanma isteği gelirse Service sınıfından bir nesne oluştur demiş olduk.
-// .net core da 3 farklı yöntemle servisleri ekleyebiliyoruz:
+builder.Services.AddTransient(typeof(IService<>), typeof(Service<>));// VeritabanÄ± iÅŸlemleri yapacaÄŸÄ±mÄ±z servisleri ekledik. Burada .net core a eÄŸer sana IService interface i kullanma isteÄŸi gelirse Service sÄ±nÄ±fÄ±ndan bir nesne oluÅŸtur demiÅŸ olduk.
+// .net core da 3 farklÄ± yÃ¶ntemle servisleri ekleyebiliyoruz:
 
-// builder.Services.AddSingleton(); : AddSingleton kullanarak oluşturduğumuz nesneden 1 tane örnek oluşur ve her seferinde bu örnek kullanılır
+// builder.Services.AddSingleton(); : AddSingleton kullanarak oluÅŸturduÄŸumuz nesneden 1 tane Ã¶rnek oluÅŸur ve her seferinde bu Ã¶rnek kullanÄ±lÄ±r
 
-// builder.Services.AddTransient() yönteminde ise önceden oluşmuş nesne varsa o kullanılır yoksa yenisi oluşturulur
+// builder.Services.AddTransient() yÃ¶nteminde ise Ã¶nceden oluÅŸmuÅŸ nesne varsa o kullanÄ±lÄ±r yoksa yenisi oluÅŸturulur
 
-// builder.Services.AddScoped() yönteminde ise yapılan her istek için yeni bir nesne oluşturulur
+// builder.Services.AddScoped() yÃ¶nteminde ise yapÄ±lan her istek iÃ§in yeni bir nesne oluÅŸturulur
 
+builder.Services.AddTransient<IProductService, ProductService>(); //product a Ã¶zel yazdÄ±ÄŸÄ±mÄ±z servis
+builder.Services.AddTransient<ICategoryService, CategoryService>();
+builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>(); // IHttpContextAccessor ile uygulama iÃ§erisindeki giriÅŸ yapan kullanÄ±cÄ±, session verileri, cookie ler gibi iÃ§eriklere view lardan veya controllerdan ulaÅŸabilmemizi saÄŸlar.
+
+// Authentication : oturum aÃ§ma servisi
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(x => 
+{
+    x.LoginPath = "/Admin/Login"; // giriÅŸ yapma sayfasÄ±
+    x.AccessDeniedPath = "/AccessDenied"; // giriÅŸ yapan kullanÄ±cÄ±nÄ±n admin yetkisi yoksa AccessDenied sayfasÄ±na yÃ¶nlendir.
+    x.LogoutPath = "/Admin/Login/Logout"; // Ã§Ä±kÄ±ÅŸ sayfasÄ±
+    x.Cookie.Name = "Administrator"; // oluÅŸacak kukinin adÄ±
+    x.Cookie.MaxAge = TimeSpan.FromDays(1); // oluÅŸacak kukinin yaÅŸam sÃ¼resi
+});
+
+//Authorization : yetkilendirme
+builder.Services.AddAuthorization(x =>
+{
+    x.AddPolicy("AdminPolicy", policy => policy.RequireClaim("Role", "Admin"));
+	x.AddPolicy("UserPolicy", policy => policy.RequireClaim("Role", "User"));
+});
 
 var app = builder.Build();
 
@@ -36,6 +57,9 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+//Authentication : oturum aÃ§ma - giriÅŸ yapma
+app.UseAuthentication(); //admin login iÃ§in. UseAuthentication Ä±n UseAuthorization dan Ã¶nce gelmesi zorunlu!
+//Authorization : yetkilendirme (oturum aÃ§an kullanÄ±cÄ±nÄ±n admine giriÅŸ yetkisi var mÄ±)
 app.UseAuthorization();
 
 app.MapControllerRoute(
@@ -47,13 +71,18 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+app.MapControllerRoute(
+	name: "custom",
+	pattern: "{customurl?}/{controller=Home}/{action=Index}/{id?}");
+
+
 app.Run();
 
 
-// Katmanlı Mimari İlişki Hiyerarşisi
+// KatmanlÄ± Mimari Ä°liÅŸki HiyerarÅŸisi
 
 /*
- * Web UI üzerinde veritabanı işlemlerini yapabilmek için WebUI ın dependencies(referanslarına) Service katmanını dependencies e sağ tıklayıp add project references diyerek açılan pencereden Service katmanına tik koyup ok butonuyla pencereyi kapatıp bağlantı kurduk.
- * Service katmanı da veritabanı işlemlerini yapabilmek için Data katmanına erişmesi gerekiyor, yine dependencies e sağ tıklayıp add project references diyerek açılan pencereden Data katmanına işaret koyup ekliyoruz.
- * Data katmanının da entity lere erişmesi gerekiyor ki class ları kulanarak veritabanı işlemleri yapabilsin. yine aynı yolu izleyerek veya class ların üzerine gelip ampul e tıklayıp add project references diyerek data dan entities e erişim vermemiz gerekiyor.
+ * Web UI Ã¼zerinde veritabanÄ± iÅŸlemlerini yapabilmek iÃ§in WebUI Ä±n dependencies(referanslarÄ±na) Service katmanÄ±nÄ± dependencies e saÄŸ tÄ±klayÄ±p add project references diyerek aÃ§Ä±lan pencereden Service katmanÄ±na tik koyup ok butonuyla pencereyi kapatÄ±p baÄŸlantÄ± kurduk.
+ * Service katmanÄ± da veritabanÄ± iÅŸlemlerini yapabilmek iÃ§in Data katmanÄ±na eriÅŸmesi gerekiyor, yine dependencies e saÄŸ tÄ±klayÄ±p add project references diyerek aÃ§Ä±lan pencereden Data katmanÄ±na iÅŸaret koyup ekliyoruz.
+ * Data katmanÄ±nÄ±n da entity lere eriÅŸmesi gerekiyor ki class larÄ± kulanarak veritabanÄ± iÅŸlemleri yapabilsin. yine aynÄ± yolu izleyerek veya class larÄ±n Ã¼zerine gelip ampul e tÄ±klayÄ±p add project references diyerek data dan entities e eriÅŸim vermemiz gerekiyor.
  */

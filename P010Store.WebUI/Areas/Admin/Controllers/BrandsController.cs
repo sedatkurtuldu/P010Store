@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using P010Store.Entities;
 using P010Store.Service.Abstract;
@@ -6,7 +7,7 @@ using P010Store.WebUI.Utils;
 
 namespace P010Store.WebUI.Areas.Admin.Controllers
 {
-    [Area("Admin")]
+    [Area("Admin"), Authorize(Policy = "AdminPolicy")]
     public class BrandsController : Controller
     {
         private readonly IService<Brand> _service; // veritabanı işlemleri için generic olarak tasarladığımız repository sınıfını kullanan service interface ini brand class ı için kullanılmak üzere tanımladık.
@@ -46,7 +47,7 @@ namespace P010Store.WebUI.Areas.Admin.Controllers
             {
                 try
                 {
-                    brand.Logo = await FileHelper.FileLoaderAsync(Logo);
+                    brand.Logo = await FileHelper.FileLoaderAsync(Logo, filePath: "/wwwroot/Img/Brands/");
                     _service.Add(brand);
                     _service.SaveChanges();
                     return RedirectToAction(nameof(Index));
@@ -59,41 +60,75 @@ namespace P010Store.WebUI.Areas.Admin.Controllers
             
             return View(brand);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create2(Brand brand, IFormFile? Logo)
+        {
+            if (ModelState.IsValid) // Model class ımız olan brand nesnesinin validasyon için koyduğumuz kurallarınıa (örneğin marka adı required-boş geçilemez gibi) uyulmuşsa
+            {
+                try
+                {
+                    brand.Logo = await FileHelper.FileLoaderAsync(Logo, filePath: "/wwwroot/Img/Brands/");
+                    _service.Add(brand);
+                    _service.SaveChanges();
+                    return RedirectToAction("Create", "Products");
+                }
+                catch
+                {
+                    ModelState.AddModelError("", "Hata Oluştu!");
+                }
+            }
+
+            return View(brand);
+        }
 
         // GET: BrandsController/Edit/5
-        public ActionResult Edit(int id)
+        public async Task<ActionResult> EditAsync(int id)
         {
-            return View();
+            var model = await _service.FindAsync(id);
+            return View(model);
         }
 
         // POST: BrandsController/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public async Task<ActionResult> EditAsync(int id, Brand brand, IFormFile? Logo)
         {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
+			if (ModelState.IsValid)
+			{
+				try
+				{
+					if(Logo is not null) brand.Logo = await FileHelper.FileLoaderAsync(Logo);
+					_service.Update(brand);
+					_service.SaveChanges();
+					return RedirectToAction(nameof(Index));
+				}
+				catch
+				{
+					ModelState.AddModelError("", "Hata Oluştu!");
+				}
+			}
+
+			return View(brand);
+		}
 
         // GET: BrandsController/Delete/5
-        public ActionResult Delete(int id)
+        public async Task<ActionResult> DeleteAsync(int id)
         {
-            return View();
-        }
+			var model = await _service.FindAsync(id);
+			return View(model);
+		}
 
         // POST: BrandsController/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
+        public ActionResult Delete(int id, Brand brand)
         {
             try
             {
+                FileHelper.FileRemover(brand.Logo, filePath: "/wwwroot/Img/Brands/");
+                _service.Delete(brand);
+                _service.SaveChanges();
                 return RedirectToAction(nameof(Index));
             }
             catch

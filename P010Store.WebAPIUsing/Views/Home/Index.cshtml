@@ -1,0 +1,45 @@
+﻿@model HomePageViewModel
+@{
+    ViewData["Title"] = "Anasayfa";
+}
+
+<partial name="_Carousel" model="Model.Carousels" />
+
+@section Scripts{
+    <script>
+        $(".carousel-item:first").addClass("active")
+        $(".carousel-indicators button:first").addClass("active")
+    </script>
+}
+<!-- Header-->
+    <header class="bg-dark py-3 mt-5">
+        <div class="container px-4 px-lg-5 my-5">
+            <div class="text-center text-white">
+                <h1 class="display-4 fw-bolder">Ürünlerimiz</h1>
+                <p class="lead fw-normal text-white-50 mb-0">Sizin için seçtiklerimiz</p>
+            </div>
+        </div>
+    </header>
+
+<partial name="_Products" model="Model.Products" />
+
+<!-- Header-->
+    <header class="bg-dark py-3 my-5">
+        <div class="container px-4 px-lg-5 my-5">
+            <div class="text-center text-white">
+                <h1 class="display-4 fw-bolder">Markalar</h1>
+                <p class="lead fw-normal text-white-50 mb-0">En İyi Markalar Burada</p>
+            </div>
+        </div>
+    </header>
+
+<div class="row">
+    @foreach (var item in Model.Brands)
+    {
+        <div class="col">
+            <a asp-controller="Brands" asp-action="Index" asp-route-id="@item.Id">
+			<img src="/Img/Brands/@item.Logo" alt="@item.Name" title="@item.Name" height="60"/>
+            </a>
+        </div>
+    }
+</div>
